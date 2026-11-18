@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pemotong Video</title>
+<style>
+  :root {
+    --bg: #0a0a0c;
+    --surface: #16161a;
+    --surface2: #1e1e24;
+    --border: #2a2a32;
+    --text: #f4f4f5;
+    --text-dim: #a1a1aa;
+    --accent: #f59e0b;
+    --accent-hover: #fbbf24;
+    --danger: #ef4444;
+    --success: #22c55e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 16px;
+    padding-bottom: 80px;
+  }
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #fff, var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    margin-top: 4px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 32px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface2);
+  }
+  .upload-area:hover, .upload-area.dragover {
+    border-color: var(--accent);
+    background: rgba(245, 158, 11, 0.05);
+  }
+  .upload-area svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 8px;
+    color: var(--accent);
+  }
+  input[type="file"] { display: none; }
+  video {
+    width: 100%;
+    border-radius: 12px;
+    background: #000;
+    margin-bottom: 12px;
+  }
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .time-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  label {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+  .time-display {
+    font-variant-numeric: tabular-nums;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  input[type="range"] {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    background: var(--border);
+    border-radius: 3px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2);
+  }
+  .mode-toggle {
+    display: flex;
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 4px;
+    gap: 4px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mode-btn.active {
+    background: var(--accent);
+    color: #000;
+  }
+  button.primary {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  button.primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+  }
+  button.primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .progress-container {
+    display: none;
+    margin-top: 12px;
+  }
+  .progress-container.visible { display: block; }
+  .progress-bar {
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.3s;
+  }
+  .status {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-top: 8px;
+    min-height: 1.2em;
+  }
+  .result {
+    display: none;
+    margin-top: 16px;
+  }
+  .result.visible { display: block; }
+  .download-btn {
+    display: inline-block;
+    width: 100%;
+    padding: 12px;
+    background: var(--success);
+    color: #000;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 12px;
+    font-weight: 700;
+    margin-top: 8px;
+  }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-top: 8px;
+  }
+  footer {
+    text-align: center;
+    margin-top: 32px;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Pemotong Video</h1>
+    <p class="subtitle">Potong video langsung di browser • Privasi terjaga</p>
+  </header>
+
+  <div class="card" id="uploadCard">
+    <div class="upload-area" id="uploadArea">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      </svg>
+      <p><strong>Ketuk untuk pilih video</strong></p>
+      <p style="font-size:0.8rem;color:var(--text-dim);margin-top:4px;">atau seret file ke sini</p>
+      <input type="file" id="fileInput" accept="video/*">
+    </div>
+  </div>
+
+  <div class="card" id="editorCard" style="display:none;">
+    <video id="preview" controls playsinline></video>
+    
+    <div class="info-row">
+      <span id="fileName">-</span>
+      <span id="fileDuration">-</span>
+    </div>
+
+    <div class="controls" style="margin-top:16px;">
+      <div class="time-group">
+        <label>Mulai</label>
+        <div class="time-display" id="startDisplay">0:00</div>
+        <input type="range" id="startSlider" min="0" max="100" value="0" step="0.1">
+      </div>
+      <div class="time-group">
+        <label>Selesai</label>
+        <div class="time-display" id="endDisplay">0:00</div>
+        <input type="range" id="endSlider" min="0" max="100" value="100" step="0.1">
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <label style="display:block;margin-bottom:8px;">Mode Potong</label>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="modeFast" data-mode="fast">Cepat</button>
+        <button class="mode-btn" id="modeAccurate" data-mode="accurate">Akurat</button>
+      </div>
+      <p style="font-size:0.75rem;color:var(--text-dim);margin-top:6px;" id="modeHint">Mode cepat: potong di keyframe terdekat, hampir instan.</p>
+    </div>
+
+    <button class="primary" id="cutBtn" style="margin-top:16px;">Potong Video</button>
+
+    <div class="progress-container" id="progressContainer">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="status" id="status">Memproses...</div>
+    </div>
+
+    <div class="result" id="result">
+      <video id="resultVideo" controls playsinline style="margin-top:12px;"></video>
+      <a id="downloadLink" class="download-btn" download="video_dipotong.mp4">Unduh Video</a>
+    </div>
+  </div>
+
+  <footer>
+    Diproses sepenuhnya di perangkat Anda menggunakan FFmpeg.wasm<br>
+    <small style="color:#f59e0b;">Tips: Buka file ini di Chrome, jangan lewat File Manager.</small>
+  </footer>
+</div>
+
+<script type="module">
+import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js';
+import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
+
+const ffmpeg = new FFmpeg();
+let loaded = false;
+let currentFile = null;
+let duration = 0;
+let mode = 'fast';
+
+const $ = id => document.getElementById(id);
+
+const uploadArea = $('uploadArea');
+const fileInput = $('fileInput');
+const preview = $('preview');
+const editorCard = $('editorCard');
+const uploadCard = $('uploadCard');
+const startSlider = $('startSlider');
+const endSlider = $('endSlider');
+const startDisplay = $('startDisplay');
+const endDisplay = $('endDisplay');
+const cutBtn = $('cutBtn');
+const progressContainer = $('progressContainer');
+const progressFill = $('progressFill');
+const statusEl = $('status');
+const result = $('result');
+const resultVideo = $('resultVideo');
+const downloadLink = $('downloadLink');
+const fileNameEl = $('fileName');
+const fileDurationEl = $('fileDuration');
+const modeFast = $('modeFast');
+const modeAccurate = $('modeAccurate');
+const modeHint = $('modeHint');
+
+function formatTime(sec) {
+  if (!isFinite(sec) || sec < 0) sec = 0;
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  const ms = Math.floor((sec % 1) * 10);
+  return `${m}:${s.toString().padStart(2,'0')}.${ms}`;
+}
+
+async function loadFFmpeg() {
+  if (loaded) return;
+  statusEl.textContent = 'Memuat FFmpeg (~30MB)...';
+  progressContainer.classList.add('visible');
+  progressFill.style.width = '10%';
+
+  try {
+    const coreBase = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd';
+    const workerUrl = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js';
+
+    const coreURL = await toBlobURL(`${coreBase}/ffmpeg-core.js`, 'text/javascript');
+    const wasmURL = await toBlobURL(`${coreBase}/ffmpeg-core.wasm`, 'application/wasm');
+    const classWorkerURL = await toBlobURL(workerUrl, 'text/javascript');
+
+    await ffmpeg.load({
+      coreURL,
+      wasmURL,
+      classWorkerURL
+    });
+
+    ffmpeg.on('log', ({ message }) => {
+      const match = /time=\s*(\d+):(\d{2}):(\d{2}(?:\.\d+)?)/.exec(message);
+      if (match && duration > 0) {
+        const t = (+match[1]*3600) + (+match[2]*60) + (+match[3]);
+        const clipDur = Math.max(0.1, (endSlider.value - startSlider.value) / 100 * duration);
+        const pct = Math.min(95, (t / clipDur) * 100);
+        progressFill.style.width = pct + '%';
+      }
+    });
+
+    loaded = true;
+    progressFill.style.width = '100%';
+    setTimeout(() => progressContainer.classList.remove('visible'), 500);
+  } catch (e) {
+    throw new Error('Gagal memuat FFmpeg: ' + (e.message || e) + '\n\nBuka file ini di Chrome (bukan File Manager) atau hosting online.');
+  }
+}
+
+uploadArea.onclick = () => fileInput.click();
+uploadArea.ondragover = e => { e.preventDefault(); uploadArea.classList.add('dragover'); };
+uploadArea.ondragleave = () => uploadArea.classList.remove('dragover');
+uploadArea.ondrop = e => {
+  e.preventDefault();
+  uploadArea.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+};
+
+fileInput.onchange = e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+};
+
+function handleFile(file) {
+  if (!file.type.startsWith('video/')) {
+    alert('Silakan pilih file video.');
+    return;
+  }
+  currentFile = file;
+  const url = URL.createObjectURL(file);
+  preview.src = url;
+  preview.onloadedmetadata = () => {
+    duration = preview.duration;
+    fileNameEl.textContent = file.name.length > 28 ? file.name.slice(0,25)+'...' : file.name;
+    fileDurationEl.textContent = formatTime(duration);
+    startSlider.value = 0;
+    endSlider.value = 100;
+    updateDisplays();
+    uploadCard.style.display = 'none';
+    editorCard.style.display = 'block';
+  };
+}
+
+function updateDisplays() {
+  const start = (startSlider.value / 100) * duration;
+  const end = (endSlider.value / 100) * duration;
+  startDisplay.textContent = formatTime(start);
+  endDisplay.textContent = formatTime(end);
+  
+  if (parseFloat(startSlider.value) > parseFloat(endSlider.value)) {
+    endSlider.value = startSlider.value;
+  }
+}
+
+startSlider.oninput = () => {
+  updateDisplays();
+  preview.currentTime = (startSlider.value / 100) * duration;
+};
+endSlider.oninput = () => {
+  updateDisplays();
+  preview.currentTime = (endSlider.value / 100) * duration;
+};
+
+modeFast.onclick = () => {
+  mode = 'fast';
+  modeFast.classList.add('active');
+  modeAccurate.classList.remove('active');
+  modeHint.textContent = 'Mode cepat: potong di keyframe terdekat, hampir instan.';
+};
+modeAccurate.onclick = () => {
+  mode = 'accurate';
+  modeAccurate.classList.add('active');
+  modeFast.classList.remove('active');
+  modeHint.textContent = 'Mode akurat: potong tepat di waktu yang dipilih (lebih lama).';
+};
+
+cutBtn.onclick = async () => {
+  if (!currentFile || duration <= 0) return;
+  cutBtn.disabled = true;
+  result.classList.remove('visible');
+  progressContainer.classList.add('visible');
+  progressFill.style.width = '5%';
+  statusEl.textContent = 'Memuat FFmpeg...';
+
+  // Peringatan jika dibuka via File Manager / content://
+  if (location.protocol === 'file:' || location.href.includes('fileprovider') || location.href.includes('content://')) {
+    statusEl.textContent = 'Peringatan: Buka file ini di Chrome, bukan File Manager.';
+  }
+
+  try {
+    await loadFFmpeg();
+    statusEl.textContent = 'Memotong video...';
+    progressFill.style.width = '15%';
+
+    const startSec = (startSlider.value / 100) * duration;
+    const endSec = (endSlider.value / 100) * duration;
+    const clipDuration = Math.max(0.1, endSec - startSec);
+
+    // Batasi durasi klip untuk HP (hindari OOM)
+    if (clipDuration > 120 && /Android/i.test(navigator.userAgent)) {
+      if (!confirm('Klip lebih dari 2 menit. Di HP sering gagal karena memori. Lanjutkan?')) {
+        throw new Error('Dibatalkan oleh pengguna');
+      }
+    }
+
+    const inputName = 'input.mp4';
+    const outputName = 'output.mp4';
+
+    await ffmpeg.writeFile(inputName, await fetchFile(currentFile));
+
+    let args;
+    if (mode === 'fast') {
+      args = [
+        '-ss', startSec.toFixed(3),
+        '-i', inputName,
+        '-t', clipDuration.toFixed(3),
+        '-map', '0:v:0?',
+        '-map', '0:a:0?',
+        '-c', 'copy',
+        '-avoid_negative_ts', 'make_zero',
+        '-movflags', '+faststart',
+        outputName
+      ];
+    } else {
+      args = [
+        '-ss', startSec.toFixed(3),
+        '-i', inputName,
+        '-t', clipDuration.toFixed(3),
+        '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+        '-c:v', 'libx264',
+        '-preset', 'veryfast',
+        '-crf', '23',
+        '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        '-movflags', '+faststart',
+        outputName
+      ];
+    }
+
+    await ffmpeg.exec(args);
+    progressFill.style.width = '95%';
+    statusEl.textContent = 'Menyelesaikan...';
+
+    const data = await ffmpeg.readFile(outputName);
+    const blob = new Blob([data.buffer], { type: 'video/mp4' });
+    const url = URL.createObjectURL(blob);
+
+    resultVideo.src = url;
+    downloadLink.href = url;
+    downloadLink.download = currentFile.name.replace(/\.[^/.]+$/, '') + '_dipotong.mp4';
+    
+    result.classList.add('visible');
+    progressFill.style.width = '100%';
+    statusEl.textContent = 'Selesai!';
+    
+    await ffmpeg.deleteFile(inputName);
+    await ffmpeg.deleteFile(outputName);
+  } catch (err) {
+    console.error(err);
+    const msg = err.message || String(err);
+    statusEl.textContent = 'Gagal: ' + msg.slice(0, 80);
+    alert('Gagal memotong video.\n\n' + msg + '\n\nTips:\n• Buka file HTML di Chrome (bukan File Manager)\n• Coba video lebih kecil (<100MB)\n• Coba mode Akurat jika mode Cepat gagal');
+  } finally {
+    cutBtn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
